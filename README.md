@@ -40,10 +40,9 @@ Follow these steps to get the project running on your local machine:
 
 2.  **Clone the repository:**
     ```bash
-    git clone <URL_OF_YOUR_REPO>
+    git clone https://github.com/Dssix/Classic-RAG.git
     cd Classic-RAG
     ```
-    (Replace `<URL_OF_YOUR_REPO>` with the actual URL of your GitHub repository).
 
 3.  **Set up a virtual environment (Recommended):**
     ```bash
