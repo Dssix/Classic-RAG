@@ -1,0 +1,144 @@
+# Used to check functions like add_documents and search
+# ========== TESTING FUNCTION ==========
+if __name__ == "__main__":
+    import tempfile
+    import shutil
+    import time
+    import gc
+    import os       # For path operations
+    import sys      # To check OS platform
+    from chromadb import PersistentClient, Settings
+
+    print("\n--- Running vector_store.py in isolated test mode ---")
+
+    # --- Store original config values ---
+    original_index_dir = INDEX_DIR
+    original_collection_name = CHROMA_COLLECTION_NAME
+    print(f"Original config: INDEX_DIR='{original_index_dir}', COLLECTION_NAME='{original_collection_name}'")
+
+    # --- Manually create a temporary directory ---
+    # mkdtemp() is generally preferred over TemporaryDirectory for manual cleanup
+    test_index_dir = tempfile.mkdtemp()
+    test_collection_name = "test_collection_" + str(uuid4())
+    print(f"Using TEST config: INDEX_DIR='{test_index_dir}', COLLECTION_NAME='{test_collection_name}'")
+
+    # --- Temporarily override config variables ---
+    INDEX_DIR = test_index_dir # Override global INDEX_DIR for functions that use it
+
+    client = None # Initialize client variable outside try block
+
+    try:
+        # --- 0. Create Chroma Client Explicitly with Reset Enabled ---
+        print(f"\n[TEST] Creating PersistentClient for path: '{INDEX_DIR}' with reset enabled")
+        client = PersistentClient(
+            path=INDEX_DIR, # Uses the overridden test_index_dir
+            settings=Settings(allow_reset=True)
+        )
+
+        # --- 1. Get Collection using the client ---
+        print(f"[TEST] Getting or creating collection: '{test_collection_name}'")
+        collection = client.get_or_create_collection(test_collection_name)
+        logger.info(f"Connected to Chromadb collection: {collection.name}")
+        print(f"[TEST] Got collection object: {collection.name}")
+        if not collection:
+             raise ValueError("Failed to get a Chroma collection object.")
+
+        # --- 2. Prepare Sample Data (Simulated Chunks) ---
+        print("\n[TEST] Preparing sample data chunks...")
+        test_chunks = [
+            {"text": "The quick brown fox jumps over the lazy dog.", "metadata": {"source": "test_doc_1", "id": "chunk1"}},
+            {"text": "This document talks about apples and oranges.", "metadata": {"source": "test_doc_2", "id": "chunk2"}},
+            {"text": "Vector stores are useful for retrieval augmented generation.", "metadata": {"source": "test_doc_3", "id": "chunk3"}},
+            {"text": "Both apples and dogs can be found in various places.", "metadata": {"source": "test_doc_4", "id": "chunk4"}},
+        ]
+        print(f"[TEST] Prepared {len(test_chunks)} sample chunks.")
+
+        # --- 3. Add Documents ---
+        print("\n[TEST] Adding documents to the test collection...")
+        add_documents(test_chunks, collection)
+        count = collection.count()
+        print(f"[TEST] Documents added. Collection count: {count}")
+        if count != len(test_chunks):
+            print(f"[WARN] Collection count ({count}) doesn't match added chunks ({len(test_chunks)})")
+
+        # --- 4. Search ---
+        test_query = "Tell me about fruit"
+        test_top_k = 2
+        print(f"\n[TEST] Searching for: '{test_query}' (top {test_top_k})")
+        search_results = search(test_query, test_top_k, collection)
+        print(f"[TEST] Search returned {len(search_results)} results:")
+        for i, res in enumerate(search_results):
+             assert "score" in res; assert "document" in res; assert "metadata" in res
+             print(f"  Result {i+1}: Score: {res.get('score'):.4f}, Metadata: {res.get('metadata')}, Doc: '{res.get('document')[:80]}...'")
+
+        # --- 5. Test Clearing using the client ---
+        print(f"\n[TEST] Clearing collection using client: '{test_collection_name}'")
+        client.delete_collection(test_collection_name)
+        logger.info(f"Collection {test_collection_name} cleared!")
+        try:
+             client.get_collection(test_collection_name)
+             print(f"[WARN] Collection '{test_collection_name}' still exists after clearing!")
+        except Exception as clear_check_e:
+             print(f"[TEST] Collection '{test_collection_name}' successfully cleared (verified via error: {type(clear_check_e).__name__}).")
+
+    except Exception as e:
+        print(f"\n--- ERROR during vector store test execution: {e} ---")
+        import traceback
+        traceback.print_exc()
+
+    finally:
+        # --- Attempt Client Resource Release ---
+        if client:
+            print("\n[TEST] Resetting ChromaDB client...")
+            try:
+                client.reset()
+                print("[TEST] Client reset successfully.")
+            except Exception as reset_err:
+                print(f"[ERROR] Failed to reset client: {reset_err}") # Log but continue
+
+            print("[TEST] Deleting client object reference...")
+            try:
+                del client
+                print("[TEST] Client object reference deleted.")
+            except NameError: pass # Ignore if already gone
+
+            print("[TEST] Triggering garbage collection...")
+            gc.collect()
+            print("[TEST] Garbage collection triggered.")
+
+        # --- Restore original config values ---
+        # Do this *before* attempting rmtree, in case rmtree fails
+        print("\n--- Restoring original configuration ---")
+        INDEX_DIR = original_index_dir
+        CHROMA_COLLECTION_NAME = original_collection_name
+        print(f"Restored: INDEX_DIR='{INDEX_DIR}', COLLECTION_NAME='{CHROMA_COLLECTION_NAME}'")
+
+        # --- Manual Temporary Directory Cleanup with Windows Error Handling ---
+        print(f"\n[TEST] Attempting to remove temporary directory: {test_index_dir}")
+        # Add a small delay, sometimes helps release locks
+        time.sleep(0.5)
+        try:
+            shutil.rmtree(test_index_dir)
+            print(f"[TEST] Successfully removed temporary directory: {test_index_dir}")
+        except PermissionError as pe:
+            # Check if we are on Windows and the error is the specific lock error
+            if sys.platform == "win32":
+                 print(f"[WARN] Could not remove temporary directory due to PermissionError (WinError 32 likely): {pe}")
+                 print("[WARN] This is a common file locking issue on Windows.")
+                 print(f"[WARN] Manual cleanup of directory may be needed: {test_index_dir}")
+            else:
+                 # If not on Windows or different error, re-raise it
+                 print(f"[ERROR] Failed to remove temporary directory with unexpected error: {pe}")
+                 # raise # Optionally re-raise if you want the test to fail hard on non-Windows cleanup errors
+        except FileNotFoundError:
+             print(f"[INFO] Temporary directory already removed or not found: {test_index_dir}") # Or handle as error if unexpected
+        except Exception as e:
+            # Catch any other unexpected errors during cleanup
+            print(f"[ERROR] An unexpected error occurred during temporary directory cleanup: {e}")
+            import traceback
+            traceback.print_exc()
+            # raise # Optionally re-raise
+
+    print(f"\n--- Test finished. ---")
+
+# === End of file vector_store.py ===

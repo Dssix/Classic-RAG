@@ -1,0 +1,145 @@
+# ========== TESTING FUNCTION ==========
+# This block runs only when the script is executed directly (e.g., python data_loader.py)
+# It does not run when this module is imported by other scripts.
+# It uses temporary files and directories to avoid affecting the real data/index.
+if __name__ == "__main__":
+    import tempfile # To create temporary files/directories for testing
+    import shutil   # To clean up if needed (though tempfile handles most)
+
+    print("--- Running data_loader.py in test mode ---")
+
+    # Store original config values to restore them later
+    original_data_dir = DATA_DIR
+    original_chunk_size = CHUNK_SIZE
+    original_chunk_overlap = CHUNK_OVERLAP
+
+    print(f"Original config: CHUNK_SIZE={original_chunk_size}, CHUNK_OVERLAP={original_chunk_overlap}, DATA_DIR={original_data_dir}")
+
+    # --- Set temporary config values for testing ---
+    test_chunk_size = 100 # Smaller value for testing
+    test_chunk_overlap = 10  # Smaller value for testing
+    print(f"Setting TEST config: CHUNK_SIZE={test_chunk_size}, CHUNK_OVERLAP={test_chunk_overlap}")
+    CHUNK_SIZE = test_chunk_size
+    CHUNK_OVERLAP = test_chunk_overlap
+
+    temp_dir_path = None # Initialize to None
+
+    try:
+        # Create a temporary directory to act as DATA_DIR for the test
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir_path = temp_dir # Store path for final message
+            print(f"\nCreated temporary directory for testing: {temp_dir}")
+
+            # --- Create dummy files for testing ---
+            test_files_created = []
+            try:
+                # 1. Create a dummy TXT file - adjust text length based on test_chunk_size
+                txt_path = os.path.join(temp_dir, "test_doc.txt")
+                with open(txt_path, 'w', encoding='utf-8') as f:
+                    f.write("This is the first line of the test text file.\n")
+                    f.write("This is the second line, intended to test chunking.\n")
+                    # Generate text slightly longer than the test chunk size
+                    f.write("Short sentence. " * int(CHUNK_SIZE * 1.5 / 15))
+                    f.write("\nEnd of test text file.")
+                test_files_created.append(txt_path)
+                print(f"Created test file: {txt_path}")
+
+                # 2. Create a dummy DOCX file (requires python-docx)
+                try:
+                    docx_path = os.path.join(temp_dir, "test_doc.docx")
+                    doc = Document()
+                    doc.add_paragraph("This is paragraph 1 in the test DOCX file.")
+                    # Generate text longer than the test chunk size
+                    doc.add_paragraph("Paragraph 2 contains more text to ensure chunking happens correctly with the smaller size. " * int(CHUNK_SIZE * 1.5 / 50))
+                    doc.add_paragraph("Final paragraph.")
+                    doc.save(docx_path)
+                    test_files_created.append(docx_path)
+                    print(f"Created test file: {docx_path}")
+                except Exception as e:
+                    print(f"Could not create DOCX test file (is python-docx installed?): {e}")
+
+
+                # 3. Create a dummy PDF file (requires PyMuPDF/fitz)
+                try:
+                    pdf_path = os.path.join(temp_dir, "test_doc.pdf")
+                    # pdf_doc = fitz.new_document()
+                    pdf_doc = fitz.open()
+                    # Page 1
+                    page1 = pdf_doc.new_page()
+                    page1.insert_text((50, 72), "Test PDF Document - Page 1")
+                    page1.insert_text((50, 92), "Some initial content on the first page.")
+                    # Page 2 - Generate text longer than the test chunk size
+                    page2 = pdf_doc.new_page()
+                    page2.insert_text((50, 72), "Test PDF Document - Page 2")
+                    page2.insert_text((50, 92), "This page has substantially more text to test chunking across pages or within this page using the smaller test chunk size. " )
+                    pdf_doc.save(pdf_path)
+                    pdf_doc.close()
+                    test_files_created.append(pdf_path)
+                    print(f"Created test file: {pdf_path}")
+                except Exception as e:
+                     print(f"Could not create PDF test file (is PyMuPDF/fitz installed?): {e}")
+
+                # 4. Create an unsupported file type (optional)
+                unsupported_path = os.path.join(temp_dir, "test_image.jpg")
+                with open(unsupported_path, 'w') as f:
+                    f.write("This is not real image data.")
+                print(f"Created unsupported test file: {unsupported_path}")
+
+                # --- Temporarily change DATA_DIR and run the function ---
+                print(f"\nTemporarily setting DATA_DIR to: {temp_dir}")
+                DATA_DIR = temp_dir # Override the global DATA_DIR for this test run
+
+                # --- Calling the main function with TEST settings ---
+                print("--- Calling load_and_chunk_documents() ---")
+                all_chunks = load_and_chunk_documents()
+                print("--- Finished load_and_chunk_documents() ---")
+
+                # --- Print test results ---
+                print(f"\nTotal chunks generated: {len(all_chunks)}")
+                if not all_chunks and not test_files_created:
+                     print("No processable test files were created, so no chunks generated (as expected).")
+                elif not all_chunks and test_files_created:
+                     print("WARNING: Test files were created but no chunks generated. Check loading functions and paths.")
+                else:
+                    # Show summary
+                    counts = {}
+                    for chunk in all_chunks:
+                        f_type = chunk.get('metadata', {}).get('type', 'unknown')
+                        counts[f_type] = counts.get(f_type, 0) + 1
+                    print(f"Chunks per file type: {counts}")
+
+                    # Show first few chunks
+                    print("\nFirst 3 chunks (or fewer):")
+                    for i, chunk in enumerate(all_chunks):
+                        print(f"--- Chunk {i} ---")
+                        print(f"  Metadata: {chunk.get('metadata')}")
+                        # Show shorter preview because chunks are smaller
+                        print(f"  Text preview: {chunk.get('text', '')[:80]}...")
+
+            except Exception as e:
+                print(f"\n--- ERROR during test file processing: {e} ---")
+                logger.exception("Detailed traceback:")
+
+        # 'with tempfile.TemporaryDirectory()' ensures cleanup even if errors occur inside
+
+    except Exception as e:
+        # This catches errors during TemporaryDirectory creation itself
+        print(f"\n--- ERROR during test setup (directory creation): {e} ---")
+        logger.exception("Detailed traceback:")
+
+    finally:
+        # --- IMPORTANT: Restore original config values regardless of success/failure ---
+        print("\n--- Restoring original configuration ---")
+        DATA_DIR = original_data_dir
+        CHUNK_SIZE = original_chunk_size
+        CHUNK_OVERLAP = original_chunk_overlap
+        print(f"Restored: CHUNK_SIZE={CHUNK_SIZE}, CHUNK_OVERLAP={CHUNK_OVERLAP}, DATA_DIR={DATA_DIR}")
+
+    # Final message indicating completion and cleanup
+    if temp_dir_path:
+        print(f"\n--- Test finished. Temporary directory {temp_dir_path} has been removed. ---")
+    else:
+        print("\n--- Test finished (Temporary directory might not have been created due to early error). ---")
+
+
+# === End of file data_loader.py ===

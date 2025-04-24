@@ -1,0 +1,100 @@
+# Testing the hybrid Retriever file
+
+if __name__ == "__main__":
+    # Ensure you have a 'data' directory with at least one small .txt file
+    # Example: data/test1.txt -> "This is the first test document about apples."
+    #          data/test2.txt -> "A second document discussing oranges and apples."
+
+    print("--- Running Hybrid Retriever Test Stub ---")
+
+    # Configure logging for the test
+    test_logger = logging.getLogger("HybridTest")
+    test_logger.setLevel(logging.INFO)
+    if not test_logger.handlers:
+        test_handler = logging.StreamHandler()
+        test_formatter = logging.Formatter('%(asctime)s - TEST - %(levelname)s - %(message)s')
+        test_handler.setFormatter(test_formatter)
+        test_logger.addHandler(test_handler)
+
+    # --- 1. Load Sample Data ---
+    try:
+        # Need to import data loading and store functions specifically for the test
+        from data_loader import load_and_chunk_documents
+        from vector_store import get_chroma_collection, add_documents as add_vector_docs, clear_collection, initializer as init_vector_store
+        from keyword_store import add_documents as add_keyword_docs, open_index, create_index, KEYWORD_INDEX_DIR
+        import shutil
+        import os
+
+        test_logger.info("Loading and chunking documents...")
+        # Limit the number of documents loaded for a quick test if needed
+        # For this example, we assume load_and_chunk_documents is efficient enough
+        # or that the data dir only contains small test files.
+        sample_chunks = load_and_chunk_documents()
+
+        if not sample_chunks:
+            test_logger.error("No documents found or loaded from DATA_DIR. Cannot run test.")
+            exit() # Exit if no data
+        test_logger.info(f"Loaded {len(sample_chunks)} chunks for testing.")
+
+        # --- 2. Setup Vector Store ---
+        test_logger.info("Setting up vector store (ChromaDB)...")
+        # Use the collection name from config
+        from config import CHROMA_COLLECTION_NAME
+        vector_collection = get_chroma_collection(CHROMA_COLLECTION_NAME)
+        test_logger.info(f"Clearing existing collection '{CHROMA_COLLECTION_NAME}' for clean test...")
+        # Note: clear_collection might not exist if you used PersistentClient's delete_collection directly.
+        # Adapt if necessary. Let's assume a simple way to clear:
+        try:
+             client = vector_collection._client # Access the underlying client if needed
+             client.delete_collection(CHROMA_COLLECTION_NAME)
+             test_logger.info(f"Collection '{CHROMA_COLLECTION_NAME}' cleared.")
+             vector_collection = get_chroma_collection(CHROMA_COLLECTION_NAME) # Re-create it
+        except Exception as e:
+             test_logger.warning(f"Could not explicitly clear collection (may be expected if it didn't exist): {e}")
+             # Attempt to proceed anyway
+
+        add_vector_docs(sample_chunks, vector_collection)
+        test_logger.info(f"Added {len(sample_chunks)} chunks to vector store.")
+
+        # --- 3. Setup Keyword Store ---
+        test_logger.info("Setting up keyword store (Whoosh)...")
+        # Clear existing index directory for a clean test
+        if os.path.exists(KEYWORD_INDEX_DIR):
+             test_logger.info(f"Removing existing keyword index directory: {KEYWORD_INDEX_DIR}")
+             shutil.rmtree(KEYWORD_INDEX_DIR)
+        keyword_index = create_index() # create_index handles dir creation
+        # Add documents to keyword store (ensure function signature matches)
+        add_keyword_docs(sample_chunks) # Assuming add_keyword_docs handles opening index internally
+        test_logger.info(f"Added {len(sample_chunks)} chunks to keyword store.")
+
+
+        # --- 4. Run Hybrid Search ---
+        test_query = "apple" # Modify query based on your test data
+        test_logger.info(f"\n--- Performing hybrid search for query: '{test_query}' ---")
+
+        # Make sure to use the correct function name and pass the collection
+        # Based on your code: hybrid_search needs vector_collection
+        ranked_results = hybrid_search(test_query, vector_collection)
+
+
+        # --- 5. Print Results ---
+        test_logger.info(f"\n--- Hybrid Search Results (Ranked by RRF) ---")
+        if not ranked_results:
+            test_logger.info("No results found.")
+        else:
+            for i, result in enumerate(ranked_results):
+                original_id = result.get('metadata', {}).get('id') or result.get('id')
+                score = result.get('combined_score', 'N/A')
+                text_preview = result.get('document', '')[:100] + "..." # Show preview
+                print(f"Rank {i+1}:")
+                print(f"  ID: {original_id}")
+                print(f"  Score (RRF): {score:.4f}")
+                print(f"  Text: {text_preview}")
+                print("-" * 20)
+
+    except ImportError as e:
+        test_logger.error(f"Failed to import necessary modules for testing. Make sure all dependencies are installed and paths are correct: {e}")
+    except Exception as e:
+        test_logger.error(f"An error occurred during the test stub execution: {e}", exc_info=True)
+
+    print("\n--- Hybrid Retriever Test Stub Finished ---")

@@ -1,0 +1,19 @@
+# --- Test Stub ---
+if __name__ == "__main__":
+    print("\n--- Running LLM Interface Test Stub ---")
+
+    if not client:
+        print("OpenAI client not initialized. Cannot run tests.")
+    else:
+        sample_prompt = "Explain the concept of Retrieval-Augmented Generation (RAG) in simple terms."
+        print(f"\n[Test] Sending simple prompt:\n'{sample_prompt}'")
+
+        response = generate(sample_prompt)
+
+        if response:
+            print("\n[Test] Received Response:")
+            print(response)
+        else:
+            print("\n[Test] Failed to get response.")
+
+    print("\n--- LLM Interface Test Stub Finished ---")

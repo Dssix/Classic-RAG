@@ -1,0 +1,20 @@
+# Core RAG & embeddings
+openai
+sentence-transformers
+chromadb
+
+# Config & environment
+python-dotenv
+
+# Document loading
+PyMuPDF            # for PDF parsing (imported as fitz)
+python-docx        # for .docx support
+
+# Keyword search (optional)
+whoosh
+
+# Utility (progress bars, if you use them)
+tqdm
+
+# (Optional) LangChain if you plan to use its abstractions later
+langchain

@@ -1,0 +1,73 @@
+FRUIT DATASET FOR RAG TESTING
+Created: 2025-04-18
+Entries: 10 fruits
+
+1. Apple (Malus domestica)
+Origin: Central Asia
+Colors: Red, Green, Yellow
+Nutritional Highlights: High in fiber (2.4g/100g), vitamin C (4.6mg)
+Common Uses: Raw consumption, juices, baking
+Fun Fact: There are over 7,500 cultivars worldwide
+
+2. Banana (Musa spp.)
+Origin: Southeast Asia
+Colors: Yellow, Green (unripe)
+Nutritional Highlights: Potassium-rich (358mg/100g), natural sugars
+Common Uses: Smoothies, desserts, fried snacks
+Fun Fact: The banana plant is technically a giant herb
+
+3. Mango (Mangifera indica)
+Origin: South Asia
+Colors: Green (unripe), Yellow/Orange (ripe)
+Nutritional Highlights: Vitamin A (54μg), vitamin C (36mg)
+Common Uses: Chutneys, salads, tropical drinks
+Fun Fact: National fruit of India and Pakistan
+
+4. Dragon Fruit (Hylocereus undatus)
+Origin: Central America
+Colors: Pink skin, white/red flesh with black seeds
+Nutritional Highlights: Low-calorie (60kcal/100g), magnesium
+Common Uses: Fruit salads, smoothie bowls
+Fun Fact: Grows on cactus plants
+
+5. Kiwi (Actinidia deliciosa)
+Origin: China
+Colors: Brown fuzzy skin, green flesh
+Nutritional Highlights: Vitamin C (92.7mg), vitamin K
+Common Uses: Dessert garnishes, jams
+Fun Fact: Originally called "Chinese gooseberry"
+
+6. Pomegranate (Punica granatum)
+Origin: Middle East
+Colors: Deep red skin and arils
+Nutritional Highlights: Antioxidants, folate
+Common Uses: Juices, salad toppings
+Fun Fact: Symbol of abundance in many cultures
+
+7. Starfruit (Averrhoa carambola)
+Origin: Southeast Asia
+Colors: Yellow-green when ripe
+Nutritional Highlights: Vitamin C (34.4mg), low sugar
+Common Uses: Tropical salads, garnishes
+Fun Fact: Entire fruit is edible including waxy skin
+
+8. Persimmon (Diospyros kaki)
+Origin: East Asia
+Colors: Orange-red
+Nutritional Highlights: Vitamin A (81μg), manganese
+Common Uses: Dried snacks, baking
+Fun Fact: Name means "divine fruit" in Greek
+
+9. Jackfruit (Artocarpus heterophyllus)
+Origin: South India
+Colors: Green exterior, yellow bulbs
+Nutritional Highlights: High in B vitamins
+Common Uses: Vegan meat substitute, curries
+Fun Fact: World's largest tree-borne fruit (up to 55kg)
+
+10. Durian (Durio zibethinus)
+Origin: Borneo and Sumatra
+Colors: Green-brown husk, yellow flesh
+Nutritional Highlights: High in carbohydrates, vitamin C
+Common Uses: Desserts, candies
+Fun Fact: Banned in many public spaces due to strong odor

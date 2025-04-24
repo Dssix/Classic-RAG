@@ -1,0 +1,27 @@
+# Main function for testing
+if __name__ == "__main__":
+    # Test Stub
+    try:
+        # Load and chunk documents (using the function from data_loader.py)
+        chunks = load_and_chunk_documents()
+
+        if not chunks:
+            raise ValueError("No chunks loaded.  Check your DATA_DIR and file types.")
+
+        # Add documents to the keyword index
+        add_documents(chunks)
+
+        # Search for keywords
+        query = "machine learning"
+        results = search_keywords(query, top_k=2)
+
+        print(f"Keyword search results for query: '{query}'")
+        for hit in results:
+            print(f"  ID: {hit['id']}")
+            print(f"  Document: {hit['document']}")
+            print(f"  Metadata: {hit['metadata']}")
+            print(f"  Score: {hit['score']}")
+            print("-" * 20)
+
+    except Exception as e:
+        logger.error(f"An error occurred during testing: {e}")
